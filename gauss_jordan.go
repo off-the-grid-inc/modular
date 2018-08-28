@@ -8,12 +8,12 @@ import (
 	"math/big"
 )
 
-func PrintArray(arr []*Int){
+func PrintArray(arr []*Int) {
 	for _, a := range arr {
 		b := (*big.Int)(a)
 		fmt.Printf("%d, ", b)
 	}
-		fmt.Println("")
+	fmt.Println("")
 }
 
 func Max(arr []*Int) (int, *Int, error) {
@@ -89,7 +89,7 @@ func GaussJordan(linearSystem [][]*Int, linearSystemResult []*Int) ([]*Int, erro
 		i_max = i_max + h
 		if max.Cmp(NewInt(0)) == 0 {
 			/* No pivot in this column, pass to next column */
-			fmt.Println("DONT ENTER HERE")
+			// fmt.Println("DONT ENTER HERE")
 			k++
 		} else {
 			SwapRows(extendedMatrix, h, i_max)
@@ -114,7 +114,7 @@ func GaussJordan(linearSystem [][]*Int, linearSystemResult []*Int) ([]*Int, erro
 
 	fmt.Println("")
 	fmt.Println("EXTENDED MATRIX")
-	for _,a := range extendedMatrix{
+	for _, a := range extendedMatrix {
 		PrintArray(a)
 	}
 	fmt.Println("")
@@ -124,7 +124,7 @@ func GaussJordan(linearSystem [][]*Int, linearSystemResult []*Int) ([]*Int, erro
 		pivots[i] = -1
 	}
 	for i := 0; i < nrows; i++ {
-		for j := 0; j < ncols; j++{
+		for j := 0; j < ncols; j++ {
 			if extendedMatrix[i][j].Cmp(NewInt(0)) != 0 {
 				pivots[i] = j
 				break
@@ -135,21 +135,23 @@ func GaussJordan(linearSystem [][]*Int, linearSystemResult []*Int) ([]*Int, erro
 		}
 	}
 	fmt.Println("Pivots: ")
-	for _, p := range pivots{
+	for _, p := range pivots {
 		fmt.Printf("%d ", p)
 	}
 	fmt.Println("")
-	
+
 	result := make([]*Int, ncols-1)
 	for j := 0; j < ncols-1; j++ {
 		result[j] = NewInt(0)
 	}
-	for i := nrows-1; i >= 0; i-- {
+	for i := nrows - 1; i >= 0; i-- {
 		if pivots[i] != -1 {
+			// fmt.Printf("DAMN i: %d\n", i)
 			result[pivots[i]] = extendedMatrix[i][ncols-1]
-			for i_ := nrows-1; i_ > i; i_-- {
+			for i_ := nrows - 1; i_ > i && pivots[i_] != -1; i_-- {
 				mult := new(Int).Mul(result[pivots[i_]], extendedMatrix[i][pivots[i_]])
 				result[pivots[i]] = new(Int).Sub(result[pivots[i]], mult)
+				result[pivots[i]] = new(Int).Mul(result[pivots[i]], ModInverse(extendedMatrix[i][pivots[i]]))
 			}
 		}
 	}
