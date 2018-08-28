@@ -2,8 +2,9 @@ package modular
 
 import (
 	"testing"
-
+	"fmt"
 	"github.com/stretchr/testify/require"
+//	"math/big"
 )
 
 func TestBasicMatrix(t *testing.T){
@@ -53,18 +54,36 @@ func TestInverse(t *testing.T) {
 	require := require.New(t)
 
 	// Test Gauss Jordan
-	linearSystem := NewMatrix(2, 2, []*Int{NewInt(1), NewInt(3), NewInt(2), NewInt(7)})
-	linearSystemResult := []*Int{NewInt(1), NewInt(0)}
+	linearSystem := NewMatrix(2, 2, []*Int{NewInt(1), NewInt(0), NewInt(0), NewInt(1)})
+	linearSystemResult := []*Int{NewInt(1), NewInt(1)}
 	result, err := GaussJordan(linearSystem.Represent2D(), linearSystemResult)
 	require.NoError(err, "gauss jordan failed")
-	require.Equal(0, result[0].Cmp(NewInt(7)), "gauss jordan failed")
-	require.Equal(0, result[1].Cmp(NewInt(-2).Mod()), "gauss jordan failed")
 
-	// Test Inverses
-	m := NewMatrix(2, 2, []*Int{NewInt(7), NewInt(-3).Mod(), NewInt(-2).Mod(), NewInt(1)})
-	inv, err := m.Inverse()
-	require.NoError(err, "inverse failed")
-	require.Equal(0, inv.values[0].Cmp(NewInt(1)), "inverse failed")
+	fmt.Println("Result 1:")
+	PrintArray(result)
 	
-}
+	require.Equal(0, result[0].Cmp(NewInt(1)), "gauss jordan failed")
+	require.Equal(0, result[1].Cmp(NewInt(1).Mod()), "gauss jordan failed")
 
+	// Second matrix
+	linearSystem2 := NewMatrix(2, 3, []*Int{NewInt(1), NewInt(0), NewInt(0), NewInt(1), NewInt(1), NewInt(0)})
+	linearSystemResult2 := []*Int{NewInt(1), NewInt(3)}
+	_ = linearSystemResult2
+
+	result2, err := GaussJordan(linearSystem2.Represent2D(), linearSystemResult2)
+	_ = result2
+	require.NoError(err, "gauss jordan failed")
+
+	PrintArray(result2)
+
+	
+	// // Test Inverses
+	// m := NewMatrix(2, 2, []*Int{NewInt(7), NewInt(-3).Mod(), NewInt(-2).Mod(), NewInt(1)})
+	// inv, err := m.Inverse()
+	// require.NoError(err, "inverse failed")
+	// _ = inv
+	// require.Equal(0, inv.values[0].Cmp(NewInt(1)), "inverse failed")
+
+
+	// PrintArray(	ExtractColumn(linearSystem.Represent2D(), 0))
+}
