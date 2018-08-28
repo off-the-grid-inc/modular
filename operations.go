@@ -95,8 +95,12 @@ func (n *Int) Bytes() []byte {
 	return (*big.Int)(n).Bytes()
 }
 
+// String returns the string representation
+func (n *Int) String() string {
+	return (*big.Int)(n).String()
+}
 
-// HELPERS
+// Helpers
 
 // Note: New Int's are not automatically reduced mod P
 
