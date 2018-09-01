@@ -76,6 +76,13 @@ func TestOperations(t *testing.T) {
 	check = new(big.Int).Mul(big.NewInt(18000), big.NewInt(4))
 	res = new(Int).LinearCombination(vec1, vec2)
 	require.Equal(0, res.Cmp((*Int)(check).Mod()), "linear combination failure")
+
+	// test String()
+	intstra := "191919199191919191919191919191919"
+	intstrb, err := IntFromString(intstra, 10)
+	require.NoError(err)
+	require.Equal(intstra, intstrb.String(), "output string is not equal to initial string")
+
 }
 
 func TestChangePrime(t *testing.T) {
