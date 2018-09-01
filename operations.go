@@ -1,9 +1,9 @@
 package modular
 
 import (
-	"math/big"
 	"crypto/rand"
 	"errors"
+	"math/big"
 )
 
 type Int big.Int
@@ -26,11 +26,11 @@ func GetP() *Int {
 // ARITHMETIC OPERATIONS
 
 // Add - Modular addition of (an arbitrary number of) field elements
-func (n *Int) Add(nums ...*Int) *Int{
+func (n *Int) Add(nums ...*Int) *Int {
 	out := big.NewInt(0)
 	for _, n := range nums {
 		out.Add(out, (*big.Int)(n))
-	} 
+	}
 	out.Mod(out, (*big.Int)(p))
 	*n = (Int)(*out)
 	return n
@@ -95,15 +95,19 @@ func (n *Int) Bytes() []byte {
 	return (*big.Int)(n).Bytes()
 }
 
+// String returns the string representation
+func (n *Int) String() string {
+	return (*big.Int)(n).String()
+}
 
-// HELPERS
+// Helpers
 
 // Note: New Int's are not automatically reduced mod P
 
-// NewInt creates a modular Int from int64 
+// NewInt creates a modular Int from int64
 func NewInt(i int64) *Int {
 	num := big.NewInt(i)
-	return (*Int)(num)
+	return (*Int)(num).Mod()
 }
 
 // SetFromBytes creates a modular Int from a byte array
@@ -148,7 +152,7 @@ func RandInt() (*Int, error) {
 	max := big.NewInt(0).Set((*big.Int)(p))
 	max.Sub(max, big.NewInt(1))
 	result, err := rand.Int(rand.Reader, max)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	return (*Int)(result), nil

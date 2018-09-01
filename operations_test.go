@@ -1,13 +1,12 @@
 package modular
 
 import (
+	"github.com/stretchr/testify/require"
 	"math/big"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
-func TestModInverse(t *testing.T){
+func TestModInverse(t *testing.T) {
 	require := require.New(t)
 
 	for i := 0; i < 100; i++ {
@@ -16,12 +15,12 @@ func TestModInverse(t *testing.T){
 		require.Equal(point.Cmp(p), -1, "out of bounds")
 		inverse := ModInverse(point)
 		require.Equal(inverse.Cmp(p), -1, "Inverse out of bounds")
-		point.Mul(point, inverse)		
-		require.Equal(0, point.Cmp(NewInt(1)),  "Inverse incorrect")
+		point.Mul(point, inverse)
+		require.Equal(0, point.Cmp(NewInt(1)), "Inverse incorrect")
 	}
 }
 func TestRandomInt(t *testing.T) {
-	require := require.New(t)	
+	require := require.New(t)
 	for i := 0; i < 100; i++ {
 		x, err := RandInt()
 		require.NoError(err)
@@ -59,7 +58,7 @@ func TestOperations(t *testing.T) {
 	res = new(Int).Exp(NewInt(2), NewInt(1000))
 	res.Add(res, res, res)
 	require.Equal(-1, res.Cmp((*Int)(check)), "did not automatically reduce")
-	check.Mod(check, (*big.Int)(p))	
+	check.Mod(check, (*big.Int)(p))
 	require.Equal(0, res.Cmp((*Int)(check)), "did not reduce properly")
 
 	// modular subtraction
@@ -68,7 +67,7 @@ func TestOperations(t *testing.T) {
 	res = new(Int).Exp(NewInt(2), NewInt(1000))
 	res.Sub(res, NewInt(1000000))
 	require.Equal(-1, res.Cmp((*Int)(check)), "did not automatically reduce")
-	check.Mod(check, (*big.Int)(p))	
+	check.Mod(check, (*big.Int)(p))
 	require.Equal(0, res.Cmp((*Int)(check)), "did not reduce properly")
 
 	// test linear combination
@@ -87,4 +86,3 @@ func TestChangePrime(t *testing.T) {
 	SetP(newp)
 	require.Equal(0, p.Cmp(newp), "change global prime failed")
 }
-

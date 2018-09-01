@@ -3,9 +3,17 @@ package modular
 import (
 	"fmt"
 	"github.com/stretchr/testify/require"
+	"math/big"
 	"testing"
-	//	"math/big"
 )
+
+func PrintArray(arr []*Int) {
+	for _, a := range arr {
+		b := (*big.Int)(a)
+		fmt.Printf("%d, ", b)
+	}
+	fmt.Println("")
+}
 
 func TestBasicMatrix(t *testing.T) {
 	require := require.New(t)
@@ -51,37 +59,56 @@ func TestMultiplication(t *testing.T) {
 }
 
 func TestInverse(t *testing.T) {
+	SetP(NewInt(5))
 	require := require.New(t)
 
 	// Test Gauss Jordan
-	linearSystem := NewMatrix(2, 2, []*Int{NewInt(1), NewInt(0), NewInt(0), NewInt(1)})
-	linearSystemResult := []*Int{NewInt(1), NewInt(1)}
+	linearSystem := NewMatrix(2, 2, []*Int{NewInt(-1), NewInt(2), NewInt(1), NewInt(0)})
+	ls := linearSystem.Represent2D()
+	linearSystemResult := []*Int{NewInt(13), NewInt(1)}
+
+	// Warning: the system is modified during the Gaussian reduction process
+	// So it's better to pass a copy
 	result, err := GaussJordan(linearSystem.Represent2D(), linearSystemResult)
+
 	require.NoError(err, "gauss jordan failed")
 
-	fmt.Println("Result 1:")
 	PrintArray(result)
+	PrintArray(linearSystem.Represent2D()[0])
+	lhs := NewInt(0)
+	for i := 0; i < len(result); i++ {
+		factor := new(Int).Mul(ls[0][i], result[i])
+		fmt.Printf("%v * %v = %v\n", (*big.Int)(ls[0][i]), (*big.Int)(result[i]), (*big.Int)(factor))
+		lhs = new(Int).Add(lhs, factor)
+	}
+	fmt.Printf("Result: %v\n", (*big.Int)(lhs))
 
-	require.Equal(0, result[0].Cmp(NewInt(1)), "gauss jordan failed")
-	require.Equal(0, result[1].Cmp(NewInt(1).Mod()), "gauss jordan failed")
+	require.Equal(0, linearSystemResult[0].Cmp(lhs), "System 1 failed")
+
+	// require.Equal(0, result[0].Cmp(NewInt(1)), "gauss jordan failed")
+	// require.Equal(0, result[1].Cmp(NewInt(1).Mod()), "gauss jordan failed")
 
 	// Second matrix
-	linearSystem2 := NewMatrix(2, 3, []*Int{NewInt(2), NewInt(0), NewInt(-1), NewInt(1), NewInt(1), NewInt(0)})
-	linearSystemResult2 := []*Int{NewInt(0), NewInt(1)}
+	linearSystem2 := NewMatrix(3, 3, []*Int{NewInt(1), NewInt(2), NewInt(3), NewInt(4), NewInt(5), NewInt(6), NewInt(7), NewInt(8), NewInt(9)})
+	ls2 := linearSystem2.Represent2D()
+
+	linearSystemResult2 := []*Int{NewInt(0), NewInt(1), NewInt(2)}
 	_ = linearSystemResult2
 
-	result2, err := GaussJordan(linearSystem2.Represent2D(), linearSystemResult2)
-	_ = result2
-	require.NoError(err, "gauss jordan failed")
+	result2, err := GaussJordan(ls2, linearSystemResult2)
 
-	PrintArray(result2)
+	lhs = NewInt(0)
+	for i := 0; i < len(result2); i++ {
+		factor := new(Int).Mul(ls2[0][i], result2[i])
+		lhs = new(Int).Add(lhs, factor)
+	}
+	require.Equal(0, linearSystemResult2[0].Cmp(lhs), "System 2 failed")
 
-	// // Test Inverses
-	// m := NewMatrix(2, 2, []*Int{NewInt(7), NewInt(-3).Mod(), NewInt(-2).Mod(), NewInt(1)})
-	// inv, err := m.Inverse()
-	// require.NoError(err, "inverse failed")
-	// _ = inv
-	// require.Equal(0, inv.values[0].Cmp(NewInt(1)), "inverse failed")
+	// Test Inverses
+	m := NewMatrix(2, 2, []*Int{NewInt(7), NewInt(-3).Mod(), NewInt(-2).Mod(), NewInt(1)})
+	inv, err := m.Inverse()
+	require.NoError(err, "inverse failed")
+	_ = inv
+	require.Equal(0, inv.values[0].Cmp(NewInt(1)), "inverse failed")
 
-	// PrintArray(	ExtractColumn(linearSystem.Represent2D(), 0))
 }
