@@ -59,7 +59,6 @@ func TestMultiplication(t *testing.T) {
 }
 
 func TestInverse(t *testing.T) {
-	SetP(NewInt(5))
 	require := require.New(t)
 
 	// Test Gauss Jordan
@@ -73,15 +72,11 @@ func TestInverse(t *testing.T) {
 
 	require.NoError(err, "gauss jordan failed")
 
-	PrintArray(result)
-	PrintArray(linearSystem.Represent2D()[0])
 	lhs := NewInt(0)
 	for i := 0; i < len(result); i++ {
 		factor := new(Int).Mul(ls[0][i], result[i])
-		fmt.Printf("%v * %v = %v\n", (*big.Int)(ls[0][i]), (*big.Int)(result[i]), (*big.Int)(factor))
 		lhs = new(Int).Add(lhs, factor)
 	}
-	fmt.Printf("Result: %v\n", (*big.Int)(lhs))
 
 	require.Equal(0, linearSystemResult[0].Cmp(lhs), "System 1 failed")
 

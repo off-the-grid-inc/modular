@@ -35,7 +35,7 @@ func TestOperations(t *testing.T) {
 	check := big.NewInt(1234)
 	check.Mul(check, big.NewInt(2))
 	res := new(Int).Mul(NewInt(1234), NewInt(2))
-	require.Equal(0, res.Cmp((*Int)(check)), "multiplication failure")
+	require.Equal(0, res.Cmp((*Int)(check).Mod()), "multiplication failure")
 
 	// modular overflow multiplication
 	check = new(big.Int).Exp(big.NewInt(2), big.NewInt(500), nil)
@@ -50,7 +50,7 @@ func TestOperations(t *testing.T) {
 	check = big.NewInt(1234)
 	check.Mul(check, big.NewInt(3))
 	res = new(Int).Add(NewInt(1234), NewInt(1234), NewInt(1234))
-	require.Equal(0, res.Cmp((*Int)(check)), "addition failure")
+	require.Equal(0, res.Cmp((*Int)(check).Mod()), "addition failure")
 
 	// modular overflow addition
 	check = new(big.Int).Exp(big.NewInt(2), big.NewInt(1000), nil)
@@ -75,7 +75,7 @@ func TestOperations(t *testing.T) {
 	vec2 := []*Int{NewInt(18000), NewInt(9000), NewInt(6000), NewInt(4500)}
 	check = new(big.Int).Mul(big.NewInt(18000), big.NewInt(4))
 	res = new(Int).LinearCombination(vec1, vec2)
-	require.Equal(0, res.Cmp((*Int)(check)), "linear combination failure")
+	require.Equal(0, res.Cmp((*Int)(check).Mod()), "linear combination failure")
 }
 
 func TestChangePrime(t *testing.T) {
