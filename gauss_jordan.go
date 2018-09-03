@@ -2,44 +2,47 @@ package modular
 
 import (
 	"errors"
-	// "fmt"
-	// "math/big"
 )
 
+// Returns the index of the first non-zero entry of the array, along with such value.
+// If no such value exists then return -1 as the index and nil as the value
 func NonZeroEntry(arr []*Int) (int, *Int, error) {
 	if len(arr) == 0 {
 		return 0, nil, errors.New("Empty array is not valid")
 	}
-	nz := arr[0]
-	idx := int(0)
+	value := arr[0]
+	index := -1
 	for i, a := range arr {
 		if a.Cmp(NewInt(0)) != 0 {
-			nz = a
-			idx = i
+			value = a
+			index = i
 			break
 		}
 	}
-	return idx, nz, nil
+	if index == -1 {
+		return index, nil, nil
+	}
+	return index, value, nil
 }
 
-// Appends linearSystemResult as the last column to linearSystem
-func createExtendedArray(linearSystem [][]*Int, linearSystemResult []*Int, n int) [][]*Int {
-	nrows := len(linearSystem)
-	ncols := len(linearSystem[0])
+// Appends arr as the last column to matrix
+func createExtendedArray(matrix [][]*Int, arr []*Int, n int) [][]*Int {
+	nrows := len(matrix)
+	ncols := len(matrix[0])
 
 	extended := make([][]*Int, nrows)
 	for i := 0; i < nrows; i++ {
 		extended[i] = make([]*Int, ncols+1)
 
 		for j := 0; j < ncols; j++ {
-			extended[i][j] = linearSystem[i][j]
+			extended[i][j] = matrix[i][j]
 		}
-		extended[i][ncols] = linearSystemResult[i]
+		extended[i][ncols] = arr[i]
 	}
 	return extended
 }
 
-// Extracts column j from the matrix
+// Extracts column j from matrix
 func ExtractColumn(matrix [][]*Int, j int) []*Int {
 	column := make([]*Int, len(matrix))
 	for i, a := range matrix {
@@ -53,53 +56,68 @@ func SwapRows(matrix [][]*Int, i int, j int) {
 	matrix[i], matrix[j] = matrix[j], matrix[i]
 }
 
-// GaussJordan solve a linear system using Gauss Jordan algorithm
+// GaussJordan solves the linear system linearSystem*x = linearSystemResult
+// It uses Gauss Jordan algorithm
+// An error is returned if no solutions are found
+// If multiple solutions exist, the one with 0's for the free variables is chosen
 func GaussJordan(linearSystem [][]*Int, linearSystemResult []*Int) ([]*Int, error) {
 	nrows := len(linearSystem)
+	// Check that matrix is non-empty
+	if nrows == 0 {
+		return nil, errors.New("Empty matrix is not allowed")
+	}
 	ncols := len(linearSystem[0])
-	dresult := len(linearSystemResult)
-	if (nrows*ncols == 0) || (ncols != dresult) {
+	// Check that all rows have the same length
+	for _, a := range linearSystem {
+		if len(a) != ncols {
+			return nil, errors.New("There are rows with different length")
+		}
+	}
+	dimension_result := len(linearSystemResult)
+	// Check the dimensions of the matrix vs the result vector
+	if (nrows*ncols == 0) || (ncols != dimension_result) {
 		return nil, errors.New("Wrong dimensions for the system")
 	}
 
 	extendedMatrix := createExtendedArray(linearSystem, linearSystemResult, ncols)
 
-	ncols++ // Matrix has been extended
+	// The matrix has been extended, the number of columns increase
+	ncols++
 
-	h := 0
-	k := 0
-	column := make([]*Int, len(extendedMatrix))
+	index_current_row := 0
+	index_current_column := 0
+	current_column := make([]*Int, len(extendedMatrix))
 
-	for (h < nrows) && (k < ncols) {
+	for (index_current_row < nrows) && (index_current_column < ncols) {
 		/* Find the k-th pivot: */
-		column = ExtractColumn(extendedMatrix, k)
+		current_column = ExtractColumn(extendedMatrix, index_current_column)
 
-		i_max, nz, err := NonZeroEntry(column[h:])
+		index_max, non_zero_entry, err := NonZeroEntry(current_column[index_current_row:])
 
 		if err != nil {
 			return nil, err
 		}
 		// Index is relative, we make it absolute
-		i_max = i_max + h
-		if nz.Cmp(NewInt(0)) == 0 {
+		index_max = index_max + index_current_row
+		if non_zero_entry == nil {
 			/* No pivot in this column, pass to next column */
-			k++
+			index_current_column++
 		} else {
-			SwapRows(extendedMatrix, h, i_max)
+			SwapRows(extendedMatrix, index_current_row, index_max)
 			/* Do for all rows below pivot: */
-			for i := h + 1; i < nrows; i++ {
-				factor := new(Int).Mul(extendedMatrix[i][k], ModInverse(extendedMatrix[h][k]))
+			for i := index_current_row + 1; i < nrows; i++ {
+				factor := new(Int).Mul(extendedMatrix[i][index_current_column], ModInverse(extendedMatrix[index_current_row][index_current_column]))
 				/* Fill with zeros the lower part of pivot column: */
-				extendedMatrix[i][k] = NewInt(0)
+				extendedMatrix[i][index_current_column] = NewInt(0)
 				/* Do for all remaining elements in current row: */
-				for j := k + 1; j < ncols; j++ {
-					num := new(Int).Mul(extendedMatrix[h][j], factor)
+				for j := index_current_column + 1; j < ncols; j++ {
+					num := new(Int).Mul(extendedMatrix[index_current_row][j], factor)
 					extendedMatrix[i][j] = new(Int).Sub(extendedMatrix[i][j], num)
 				}
 			}
 			/* Increase pivot row and column */
-			h++
-			k++
+			index_current_row++
+			index_current_column++
 		}
 	}
 
@@ -116,6 +134,7 @@ func GaussJordan(linearSystem [][]*Int, linearSystemResult []*Int) ([]*Int, erro
 				break
 			}
 		}
+		// If the pivot is the entry in the last column then an error is returned since in the case no solutions exist
 		if pivots[i] == ncols-1 {
 			err := errors.New("There are no solutions")
 			return nil, err
