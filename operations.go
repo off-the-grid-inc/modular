@@ -1,6 +1,7 @@
 package modular
 
 import (
+	"sync"
 	"crypto/rand"
 	"errors"
 	"math/big"
@@ -8,19 +9,35 @@ import (
 
 type Int big.Int
 
-// Default prime (256-bit secp256k1 EC order)
-var (
-	p, _ = IntFromString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
-)
-
-// SetP resets the (prime) modulus across the package
-func SetP(new_prime *Int) *Int {
-	p = new_prime
-	return p
+// First, create a struct that contains the value we want to return
+// along with a mutex instance
+type Prime struct {
+	value *Int
+	m     sync.Mutex
 }
 
+// Default prime (256-bit secp256k1 EC order)
+var (
+	val, _ = IntFromString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
+	p = &Prime {
+		value: val,
+	}
+)
+
 func GetP() *Int {
-	return p
+	p.m.Lock()
+
+	defer p.m.Unlock()
+	return p.value
+}
+
+func SetP(val *Int) *Int {
+	p.m.Lock()
+
+	p.value = val
+	defer p.m.Unlock()
+
+	return p.value
 }
 
 // ARITHMETIC OPERATIONS
@@ -31,7 +48,7 @@ func (n *Int) Add(nums ...*Int) *Int {
 	for _, n := range nums {
 		out.Add(out, (*big.Int)(n))
 	}
-	out.Mod(out, (*big.Int)(p))
+	out.Mod(out, (*big.Int)(GetP()))
 	*n = (Int)(*out)
 	return n
 }
@@ -39,7 +56,7 @@ func (n *Int) Add(nums ...*Int) *Int {
 // Mul - Modular multiplication of two field elements
 func (n *Int) Mul(x, y *Int) *Int {
 	out := new(big.Int).Mul((*big.Int)(x), (*big.Int)(y))
-	out.Mod(out, (*big.Int)(p))
+	out.Mod(out, (*big.Int)(GetP()))
 	*n = (Int)(*out)
 	return n
 }
@@ -47,7 +64,7 @@ func (n *Int) Mul(x, y *Int) *Int {
 // Sub - Modular Subtraction of two field elements
 func (n *Int) Sub(x, y *Int) *Int {
 	out := new(big.Int).Sub((*big.Int)(x), (*big.Int)(y))
-	out.Mod(out, (*big.Int)(p))
+	out.Mod(out, (*big.Int)(GetP()))
 	*n = (Int)(*out)
 	return n
 }
@@ -58,7 +75,7 @@ func (n *Int) LinearCombination(vec1 []*Int, vec2 []*Int) *Int {
 	for i := range vec1 {
 		out.Add(out, new(big.Int).Mul((*big.Int)(vec1[i]), (*big.Int)(vec2[i])))
 	}
-	out.Mod(out, (*big.Int)(p))
+	out.Mod(out, (*big.Int)(GetP()))
 	*n = (Int)(*out)
 	return n
 }
@@ -66,22 +83,22 @@ func (n *Int) LinearCombination(vec1 []*Int, vec2 []*Int) *Int {
 // ModInverse is a custom implementation for the modular inverse of a field element
 func ModInverse(number *Int) *Int {
 	copy := big.NewInt(0).Set((*big.Int)(number))
-	pcopy := big.NewInt(0).Set((*big.Int)(p))
+	pcopy := big.NewInt(0).Set((*big.Int)(GetP()))
 	x := big.NewInt(0)
 	y := big.NewInt(0)
 
 	copy.GCD(x, y, pcopy, copy)
 
-	result := big.NewInt(0).Set((*big.Int)(p))
+	result := big.NewInt(0).Set((*big.Int)(GetP()))
 
 	result.Add(result, y)
-	result.Mod(result, (*big.Int)(p))
+	result.Mod(result, (*big.Int)(GetP()))
 	return (*Int)(result)
 }
 
 // Exp - exponentiate in a finite field
 func (n *Int) Exp(base, exp *Int) *Int {
-	*n = (Int)(*new(big.Int).Exp((*big.Int)(base), (*big.Int)(exp), (*big.Int)(p)))
+	*n = (Int)(*new(big.Int).Exp((*big.Int)(base), (*big.Int)(exp), (*big.Int)(GetP())))
 	return n
 }
 
@@ -102,26 +119,26 @@ func (n *Int) String() string {
 
 // Helpers
 
-// Note: New Int's are not automatically reduced mod P
-
 // NewInt creates a modular Int from int64
 func NewInt(i int64) *Int {
 	num := big.NewInt(i)
 	return (*Int)(num).Mod()
 }
 
-// SetFromBytes creates a modular Int from a byte array
+// Note: IntFrom... methods are not automatically reduced mod P
+
+// IntFromBytes creates a modular Int from a byte array
 func IntFromBytes(b []byte) *Int {
 	num := new(big.Int).SetBytes(b)
 	return (*Int)(num)
 }
 
-// SetFromBig creates a modular Int from a big Int
+// IntFromBig creates a modular Int from a big Int
 func IntFromBig(num *big.Int) *Int {
 	return (*Int)(new(big.Int).Set(num))
 }
 
-// SetFromString creates a modular Int from a string representation of an integer in a specific base.
+// IntFromString creates a modular Int from a string representation of an integer in a specific base.
 func IntFromString(str string, base int) (*Int, error) {
 	num, err := new(big.Int).SetString(str, base)
 	if !err {
@@ -132,7 +149,7 @@ func IntFromString(str string, base int) (*Int, error) {
 
 // IsModP checks whether a modular Int actually lies within the field order
 func (n *Int) IsModP() bool {
-	if n.Cmp(p) == -1 {
+	if n.Cmp(GetP()) == -1 {
 		return true
 	}
 	return false
@@ -143,13 +160,13 @@ func (n *Int) AsBig() *big.Int {
 }
 
 func (n *Int) Mod() *Int {
-	*n = (Int)(*new(big.Int).Mod((*big.Int)(n), (*big.Int)(p)))
+	*n = (Int)(*new(big.Int).Mod((*big.Int)(n), (*big.Int)(GetP())))
 	return n
 }
 
 // RandInt creates a new random modular Int within the range [0, p)
 func RandInt() (*Int, error) {
-	max := big.NewInt(0).Set((*big.Int)(p))
+	max := big.NewInt(0).Set((*big.Int)(GetP()))
 	max.Sub(max, big.NewInt(1))
 	result, err := rand.Int(rand.Reader, max)
 	if err != nil {
