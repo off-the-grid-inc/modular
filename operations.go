@@ -14,7 +14,7 @@ type Int struct {
 // Default prime (256-bit secp256k1 EC order)
 var (
 	defaultP, _ = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
-	ZERO = big.NewInt(0)
+	ZERO        = big.NewInt(0)
 )
 
 // ARITHMETIC OPERATIONS

@@ -89,8 +89,9 @@ func GaussJordan(linearSystem [][]*Int, linearSystemResult []*Int) ([]*Int, erro
 	current_column := make([]*Int, len(extendedMatrix))
 
 	for (index_current_row < nrows) && (index_current_column < ncols) {
-		/* Find the k-th pivot: */
+		// Find the k-th pivot:
 		current_column = ExtractColumn(extendedMatrix, index_current_column)
+		prime := current_column[0].Base
 
 		index_max, non_zero_entry, err := NonZeroEntry(current_column[index_current_row:])
 
@@ -100,7 +101,7 @@ func GaussJordan(linearSystem [][]*Int, linearSystemResult []*Int) ([]*Int, erro
 		// Index is relative, we make it absolute
 		index_max = index_max + index_current_row
 		if non_zero_entry == nil {
-			// No pivot in this column, pass to next column 
+			// No pivot in this column, pass to next column
 			index_current_column++
 		} else {
 			SwapRows(extendedMatrix, index_current_row, index_max)
@@ -108,7 +109,7 @@ func GaussJordan(linearSystem [][]*Int, linearSystemResult []*Int) ([]*Int, erro
 			for i := index_current_row + 1; i < nrows; i++ {
 				factor := new(Int).Mul(extendedMatrix[i][index_current_column], ModInverse(extendedMatrix[index_current_row][index_current_column]))
 				// Fill with zeros the lower part of pivot column:
-				extendedMatrix[i][index_current_column] = NewInt(0, current_column[0].Base)
+				extendedMatrix[i][index_current_column] = NewInt(0, prime)
 				// Do for all remaining elements in current row:
 				for j := index_current_column + 1; j < ncols; j++ {
 					num := new(Int).Mul(extendedMatrix[index_current_row][j], factor)
@@ -142,8 +143,9 @@ func GaussJordan(linearSystem [][]*Int, linearSystemResult []*Int) ([]*Int, erro
 	}
 
 	result := make([]*Int, ncols-1)
+	prime := extendedMatrix[0][0].Base
 	for j := 0; j < ncols-1; j++ {
-		result[j] = NewInt(0, extendedMatrix[0][0].Base)
+		result[j] = NewInt(0, prime)
 	}
 
 	// Calculate result in position pivots[i]

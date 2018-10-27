@@ -67,11 +67,12 @@ func (m *Matrix) ScalarMul(i *Int) *Matrix {
 
 func (m *Matrix) Represent2D() [][]*Int {
 	mat := make([][]*Int, m.nRow)
+	prime := m.GetRow(1)[0].Base
 	for i := range mat {
 		row := m.GetRow(i + 1)
 		mat[i] = make([]*Int, len(row))
 		for j := range mat[i] {
-			mat[i][j] = IntFromBig(row[j].Value, row[j].Base)
+			mat[i][j] = IntFromBig(row[j].Value, prime)
 		}
 	}
 	return mat
@@ -79,8 +80,9 @@ func (m *Matrix) Represent2D() [][]*Int {
 
 func (m *Matrix) Copy() *Matrix {
 	vals := make([]*Int, len(m.values))
+	prime := m.values[0].Base
 	for i := range vals {
-		vals[i] = IntFromBig(m.values[i].Value, m.values[i].Base)
+		vals[i] = IntFromBig(m.values[i].Value, prime)
 	}
 	return NewMatrix(m.nRow, m.nCol, vals)
 }
