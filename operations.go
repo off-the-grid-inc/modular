@@ -6,154 +6,162 @@ import (
 	"math/big"
 )
 
-type Int big.Int
+type Int struct {
+	Value *big.Int
+	Base  *big.Int
+}
 
 // Default prime (256-bit secp256k1 EC order)
 var (
-	p, _ = IntFromString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
+	defaultP, _ = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
+	ZERO = big.NewInt(0)
 )
-
-// SetP resets the (prime) modulus across the package
-func SetP(new_prime *Int) *Int {
-	p = new_prime
-	return p
-}
-
-func GetP() *Int {
-	return p
-}
 
 // ARITHMETIC OPERATIONS
 
 // Add - Modular addition of (an arbitrary number of) field elements
-func (n *Int) Add(nums ...*Int) *Int {
-	out := big.NewInt(0)
-	for _, n := range nums {
-		out.Add(out, (*big.Int)(n))
-	}
-	out.Mod(out, (*big.Int)(p))
-	*n = (Int)(*out)
+func (n *Int) Add(x, y *Int) *Int {
+	v := new(big.Int).Add(x.Value, y.Value)
+	n.Value = v.Mod(v, x.Base)
+	n.Base = x.Base
 	return n
 }
 
 // Mul - Modular multiplication of two field elements
 func (n *Int) Mul(x, y *Int) *Int {
-	out := new(big.Int).Mul((*big.Int)(x), (*big.Int)(y))
-	out.Mod(out, (*big.Int)(p))
-	*n = (Int)(*out)
+	v := new(big.Int).Mul(x.Value, y.Value)
+	n.Value = v.Mod(v, x.Base)
+	n.Base = x.Base
 	return n
 }
 
 // Sub - Modular Subtraction of two field elements
 func (n *Int) Sub(x, y *Int) *Int {
-	out := new(big.Int).Sub((*big.Int)(x), (*big.Int)(y))
-	out.Mod(out, (*big.Int)(p))
-	*n = (Int)(*out)
+	v := new(big.Int).Sub(x.Value, y.Value)
+	n.Value = v.Mod(v, x.Base)
+	n.Base = x.Base
 	return n
 }
 
 // LinearCombination is the dot product of two vectors in a finite field. Vectors should have the same dimensionality for proper behavior
-func (n *Int) LinearCombination(vec1 []*Int, vec2 []*Int) *Int {
-	out := big.NewInt(0)
+func (n *Int) LinearCombination(vec1, vec2 []*Int) *Int {
+	v := big.NewInt(0)
+	n.Base = vec1[0].Base
 	for i := range vec1 {
-		out.Add(out, new(big.Int).Mul((*big.Int)(vec1[i]), (*big.Int)(vec2[i])))
+		v.Add(v, new(big.Int).Mul(vec1[i].Value, vec2[i].Value))
 	}
-	out.Mod(out, (*big.Int)(p))
-	*n = (Int)(*out)
+	n.Value = v.Mod(v, n.Base)
 	return n
 }
 
 // ModInverse is a custom implementation for the modular inverse of a field element
 func ModInverse(number *Int) *Int {
-	copy := big.NewInt(0).Set((*big.Int)(number))
-	pcopy := big.NewInt(0).Set((*big.Int)(p))
+	copy := big.NewInt(0).Set(number.Value)
+	pcopy := big.NewInt(0).Set(number.Base)
 	x := big.NewInt(0)
 	y := big.NewInt(0)
 
 	copy.GCD(x, y, pcopy, copy)
 
-	result := big.NewInt(0).Set((*big.Int)(p))
+	result := big.NewInt(0).Set(number.Base)
 
 	result.Add(result, y)
-	result.Mod(result, (*big.Int)(p))
-	return (*Int)(result)
+	result.Mod(result, number.Base)
+	return &Int{
+		Value: result,
+		Base:  number.Base,
+	}
 }
 
 // Exp - exponentiate in a finite field
 func (n *Int) Exp(base, exp *Int) *Int {
-	*n = (Int)(*new(big.Int).Exp((*big.Int)(base), (*big.Int)(exp), (*big.Int)(p)))
+	n.Value = new(big.Int).Exp(base.Value, exp.Value, base.Base)
+	n.Base = base.Base
 	return n
 }
 
 // Cmp compares two finite field elements
 func (n *Int) Cmp(x *Int) int {
-	return (*big.Int)(n).Cmp((*big.Int)(x))
+	return n.Value.Cmp(x.Value)
 }
 
 // Bytes returs the byte array representation of a field element
 func (n *Int) Bytes() []byte {
-	return (*big.Int)(n).Bytes()
+	return n.Value.Bytes()
 }
 
 // String returns the string representation
 func (n *Int) String() string {
-	return (*big.Int)(n).String()
+	return n.Value.String()
 }
 
 // Helpers
 
-// Note: New Int's are not automatically reduced mod P
+// Note: when instansiating new Ints the prime is assigned as a pointer which is assumed to be static.
+// If Int.Base prime pointers are altered it could cause strange behaviour and/or data races.
 
 // NewInt creates a modular Int from int64
-func NewInt(i int64) *Int {
+func NewInt(i int64, prime *big.Int) *Int {
 	num := big.NewInt(i)
-	return (*Int)(num).Mod()
+	if prime == nil {
+		prime = defaultP
+	}
+	return &Int{
+		Value: num.Mod(num, prime),
+		Base:  prime,
+	}
 }
 
 // SetFromBytes creates a modular Int from a byte array
-func IntFromBytes(b []byte) *Int {
+func IntFromBytes(b []byte, prime *big.Int) *Int {
 	num := new(big.Int).SetBytes(b)
-	return (*Int)(num)
+	if prime == nil {
+		prime = defaultP
+	}
+	return &Int{
+		Value: num.Mod(num, prime),
+		Base:  prime,
+	}
 }
 
 // SetFromBig creates a modular Int from a big Int
-func IntFromBig(num *big.Int) *Int {
-	return (*Int)(new(big.Int).Set(num))
-}
-
-// SetFromString creates a modular Int from a string representation of an integer in a specific base.
-func IntFromString(str string, base int) (*Int, error) {
-	num, err := new(big.Int).SetString(str, base)
-	if !err {
-		return nil, errors.New("Could not set string")
+func IntFromBig(num *big.Int, prime *big.Int) *Int {
+	if prime == nil {
+		prime = defaultP
 	}
-	return (*Int)(num), nil
-}
-
-// IsModP checks whether a modular Int actually lies within the field order
-func (n *Int) IsModP() bool {
-	if n.Cmp(p) == -1 {
-		return true
+	return &Int{
+		Value: new(big.Int).Mod(num, prime),
+		Base:  prime,
 	}
-	return false
 }
 
-func (n *Int) AsBig() *big.Int {
-	return (*big.Int)(n)
-}
-
-func (n *Int) Mod() *Int {
-	*n = (Int)(*new(big.Int).Mod((*big.Int)(n), (*big.Int)(p)))
-	return n
+// SetFromString creates a modular Int from a string representation of an integer in a specific Base.
+func IntFromString(str string, Base int, prime *big.Int) (*Int, error) {
+	num, ok := new(big.Int).SetString(str, Base)
+	if !ok {
+		return nil, errors.New("Cannot interpret string")
+	}
+	if prime == nil {
+		prime = defaultP
+	}
+	return &Int{
+		Value: new(big.Int).Mod(num, prime),
+		Base:  prime,
+	}, nil
 }
 
 // RandInt creates a new random modular Int within the range [0, p)
-func RandInt() (*Int, error) {
-	max := big.NewInt(0).Set((*big.Int)(p))
-	max.Sub(max, big.NewInt(1))
+func RandInt(prime *big.Int) (*Int, error) {
+	if prime == nil {
+		prime = defaultP
+	}
+	max := new(big.Int).Sub(prime, big.NewInt(1))
 	result, err := rand.Int(rand.Reader, max)
 	if err != nil {
 		return nil, err
 	}
-	return (*Int)(result), nil
+	return &Int{
+		Value: result,
+		Base:  prime,
+	}, nil
 }

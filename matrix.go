@@ -12,15 +12,14 @@ type Matrix struct {
 
 // NewMatrix creates a new (unexported) matrix struct.
 func NewMatrix(r, c int, vals []*Int) *Matrix {
-	space := r*c - len(vals)
-	for space > 0 {
-		vals = append(vals, NewInt(0))
-		space--
+	values := make([]*Int, r*c)
+	for i, v := range vals {
+		values[i] = v
 	}
 	return &Matrix{
 		nRow:   r,
 		nCol:   c,
-		values: vals,
+		values: values,
 	}
 }
 
@@ -72,7 +71,7 @@ func (m *Matrix) Represent2D() [][]*Int {
 		row := m.GetRow(i + 1)
 		mat[i] = make([]*Int, len(row))
 		for j := range mat[i] {
-			mat[i][j] = IntFromBig(row[j].AsBig())
+			mat[i][j] = IntFromBig(row[j].Value, row[j].Base)
 		}
 	}
 	return mat
@@ -81,7 +80,7 @@ func (m *Matrix) Represent2D() [][]*Int {
 func (m *Matrix) Copy() *Matrix {
 	vals := make([]*Int, len(m.values))
 	for i := range vals {
-		vals[i] = IntFromBig(m.values[i].AsBig())
+		vals[i] = IntFromBig(m.values[i].Value, m.values[i].Base)
 	}
 	return NewMatrix(m.nRow, m.nCol, vals)
 }
@@ -120,7 +119,7 @@ func (m *Matrix) Inverse() (*Matrix, error) {
 	inverse := NewMatrix(m.nRow, m.nCol, []*Int{})
 	i := 1
 	for i < m.nRow+1 {
-		col, err := GaussJordan(m.Represent2D(), GetI(m.nRow).GetRow(i))
+		col, err := GaussJordan(m.Represent2D(), GetI(m.nRow, m.values[0]).GetRow(i))
 		if err != nil {
 			return nil, err
 		}
@@ -131,13 +130,17 @@ func (m *Matrix) Inverse() (*Matrix, error) {
 	return inverse, nil
 }
 
-func GetI(c int) *Matrix {
+// GetI creates a new Identity matrix of a given (square) size.
+func GetI(c int, context *Int) *Matrix {
 	I := NewMatrix(c, c, []*Int{})
 	i := 0
 	idex := 0
+	for q := 0; q < len(I.values); q++ {
+		I.values[q] = NewInt(0, context.Base)
+	}
 	for i < c {
 		idex = c*i + i
-		I.values[idex] = NewInt(1)
+		I.values[idex] = NewInt(1, context.Base)
 		i++
 	}
 	return I
