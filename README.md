@@ -1,2 +1,2 @@
 # modular
-golang math package for finite field arithmetic
+Modular is a golang math package for cyclic group arithmetic. We create a modular.Int type (alias of big.Int) which does arithmetic operations in a very similar way to math/big, but automatically works within a prime order group, handling all modular reductions for convenience. We also built a modest modular.Matrix type with a few rudimentary matrix operations for working with discrete matrices, since most linear algebra packages work with rational/floating point types and don't seamlessly support modular arithmetic in their matrix operations. 
